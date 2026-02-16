@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ihsan lucky center - Smart Retail Management System</title>
+    <meta name="description"
+        content="A premium, modern Supermarket Point of Sale system with real-time stock management, persistent cart, and elegant glassmorphism design.">
+    <meta name="keywords" content="POS, Supermarket, Retail, Inventory Management, Glassmorphism, Web App">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+
+<body>
+    <!-- Login Overlay -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-box glass-form">
+            <h2><i class="fas fa-lock"></i> Admin Login</h2>
+            <div class="form-group">
+                <input type="password" id="loginPassword" placeholder="Enter Admin Password">
+            </div>
+            <button id="loginBtn" class="btn btn-primary" style="width: 100%;">Login</button>
+            <p id="loginError" style="color: #ef4444; margin-top: 10px; display: none;">Invalid Password!</p>
+        </div>
+    </div>
+
+    <!-- First Time Setup Modal -->
+    <div id="setupModal" class="modal" style="z-index: 2000;">
+        <div class="modal-content" style="max-width: 400px;">
+            <h2><i class="fas fa-user-shield"></i> Initial Security Setup</h2>
+            <p>Please set your admin password to protect sensitive data like reports and customer information.</p>
+            <div class="form-group">
+                <label for="setupPassword">New Admin Password</label>
+                <input type="password" id="setupPassword" placeholder="Minimum 4 characters">
+            </div>
+            <div class="form-group">
+                <label for="confirmSetupPassword">Confirm Password</label>
+                <input type="password" id="confirmSetupPassword">
+            </div>
+            <button id="saveSetupBtn" class="btn btn-primary" style="width: 100%;">Save and Continue</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header glass">
+            <div class="brand">
+                <h1><i class="fas fa-store"></i> IHSAN LUCKY STORE</h1>
+                <p class="address">KOLLANDALWA KADIGAWA NIKAWERATIYA</p>
+            </div>
+            <div class="header-actions">
+                <button id="scanQrBtn" class="btn btn-primary" onclick="openScanner()">
+                    <i class="fas fa-qrcode"></i> Scan QR
+                </button>
+                <button id="manageProductsBtn" class="btn btn-secondary" onclick="openProductModal()">
+                    <i class="fas fa-edit"></i> Manage Products
+                </button>
+                <button id="manageCustomersBtn" class="btn btn-secondary" onclick="openCustomerModal()">
+                    <i class="fas fa-users"></i> Customers
+                </button>
+                <button id="reportsBtn" class="btn btn-secondary" onclick="openReportModal()">
+                    <i class="fas fa-chart-line"></i> Reports
+                </button>
+                <div class="datetime">
+                    <div id="date"></div>
+                    <div id="time"></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main POS Area -->
+        <div class="pos-container">
+            <!-- Products Section -->
+            <div class="products-section glass">
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="Search products...">
+                    <select id="categoryFilter">
+                        <option value="all">All Categories</option>
+                        <option value="vegetables">Vegetables</option>
+                        <option value="fruits">Fruits</option>
+                        <option value="dairy">Dairy</option>
+                        <option value="bakery">Bakery</option>
+                        <option value="beverages">Beverages</option>
+                        <option value="snacks">Snacks</option>
+                    </select>
+                </div>
+
+                <div class="products-grid" id="productsGrid">
+                    <!-- Products will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Cart Section -->
+            <div class="cart-section glass">
+                <h2><i class="fas fa-shopping-cart"></i> Current Sale</h2>
+
+                <div class="cart-items" id="cartItems">
+                    <!-- Cart items will appear here -->
+                </div>
+
+                <div class="cart-summary">
+                    <div class="summary-row">
+                        <span>Subtotal:</span>
+                        <span id="subtotal">LKR 0.00</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Discount:</span>
+                        <span id="discountAmount">LKR 0.00</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>Total:</span>
+                        <span id="total">LKR 0.00</span>
+                    </div>
+                    <div class="form-group discount-input-group" style="margin-top: 15px;">
+                        <label for="discountInput">Add Discount (LKR)</label>
+                        <input type="number" id="discountInput" placeholder="0.00" step="0.01" min="0">
+                    </div>
+                </div>
+
+                <div class="cart-actions">
+                    <button id="checkoutBtn" class="btn btn-primary">
+                        <i class="fas fa-cash-register"></i> Checkout
+                    </button>
+                    <button id="clearCartBtn" class="btn btn-secondary">
+                        <i class="fas fa-trash"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closePaymentModal()">&times;</span>
+            <h2>Payment Details</h2>
+
+            <div class="payment-summary">
+                <p>Total Amount: <span id="paymentTotal">LKR 0.00</span></p>
+            </div>
+
+            <div class="payment-methods">
+                <label>
+                    <input type="radio" name="paymentMethod" value="cash" checked> Cash
+                </label>
+                <label>
+                    <input type="radio" name="paymentMethod" value="card"> Card
+                </label>
+                <label>
+                    <input type="radio" name="paymentMethod" value="loan"> Loan/Credit
+                </label>
+            </div>
+
+            <div id="customerSelection" class="form-group" style="margin-top: 20px;">
+                <label for="saleCustomer">Select Customer (Optional for Cash/Card, Required for Loan)</label>
+                <select id="saleCustomer">
+                    <option value="">Guest Customer</option>
+                </select>
+            </div>
+
+            <div id="cashPayment" class="payment-details">
+                <label>Amount Received:</label>
+                <input type="number" id="amountReceived" step="0.01" min="0">
+                <p>Change: <span id="change">LKR 0.00</span></p>
+            </div>
+
+            <button id="completePaymentBtn" class="btn btn-primary">
+                Complete Payment
+            </button>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div id="receiptModal" class="modal">
+        <div class="modal-content receipt">
+            <h2>Receipt</h2>
+            <div id="receiptContent"></div>
+            <div class="receipt-actions">
+                <button id="printReceiptBtn" class="btn btn-secondary" onclick="printReceipt()">
+                    <i class="fas fa-print"></i> Print Receipt
+                </button>
+                <button class="btn btn-primary" onclick="closeReceipt()">
+                    New Sale
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Management Modal -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeProductModal()">&times;</span>
+            <h2><i class="fas fa-plus-circle"></i> Add New Product</h2>
+            <form id="productForm">
+                <div class="form-group">
+                    <label for="pName">Product Name</label>
+                    <input type="text" id="pName" required placeholder="e.g. Fresh Mangoes">
+                </div>
+                <div class="form-group">
+                    <label for="pPrice">Price (LKR)</label>
+                    <input type="number" id="pPrice" step="0.01" required placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label for="pCategory">Category</label>
+                    <select id="pCategory" required>
+                        <option value="vegetables">Vegetables</option>
+                        <option value="fruits">Fruits</option>
+                        <option value="dairy">Dairy</option>
+                        <option value="bakery">Bakery</option>
+                        <option value="beverages">Beverages</option>
+                        <option value="snacks">Snacks</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="pStock">Initial Stock</label>
+                    <input type="number" id="pStock" required placeholder="0">
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Save Product
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Customer Management Modal -->
+    <div id="customerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCustomerModal()">&times;</span>
+            <h2><i class="fas fa-users"></i> Customer Management</h2>
+
+            <form id="customerForm" class="glass-form" style="margin-bottom: 20px;">
+                <div class="form-group">
+                    <label for="cName">Customer Name</label>
+                    <input type="text" id="cName" required placeholder="e.g. John Doe">
+                </div>
+                <div class="form-group">
+                    <label for="cPhone">Phone Number</label>
+                    <input type="text" id="cPhone" required placeholder="e.g. 0771234567">
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> Add Customer
+                </button>
+            </form>
+
+            <div class="customer-list-container">
+                <h3>Customer List</h3>
+                <div id="customerList" class="customer-list">
+                    <!-- Customers will be listed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Details Modal -->
+    <div id="customerDetailsModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <span class="close" onclick="closeDetailsModal()">&times;</span>
+            <h2><i class="fas fa-user-tag"></i> Customer Details</h2>
+
+            <div id="customerDetailsHeader" class="glass-form"
+                style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                <div id="customerBasicInfo">
+                    <!-- Name and Phone will be here -->
+                </div>
+                <div id="customerLoanStatus" style="text-align: right;">
+                    <!-- Balance and Pay button will be here -->
+                </div>
+            </div>
+
+            <!-- Edit Section (initially hidden) -->
+            <div id="editCustomerSection" class="glass-form" style="display: none; margin-bottom: 20px;">
+                <h3>Edit Customer</h3>
+                <form id="editCustomerForm">
+                    <input type="hidden" id="editCustomerId">
+                    <div class="form-group">
+                        <label for="editCName">Name</label>
+                        <input type="text" id="editCName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editCPhone">Phone</label>
+                        <input type="text" id="editCPhone" required>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <button type="button" class="btn btn-secondary"
+                            onclick="toggleEditCustomer(false)">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="history-container">
+                <h3>Transaction History</h3>
+                <div id="customerHistoryList" class="history-list">
+                    <!-- History items will be loaded here -->
+                </div>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 20px; display: flex; gap: 15px;">
+                <button id="editCustomerBtn" class="btn btn-secondary" onclick="toggleEditCustomer(true)">
+                    <i class="fas fa-edit"></i> Edit Details
+                </button>
+                <button id="recordPaymentBtn" class="btn btn-primary" onclick="showPaymentForm()">
+                    <i class="fas fa-money-bill-wave"></i> Record Payment
+                </button>
+            </div>
+
+            <!-- Payment Form (initially hidden) -->
+            <div id="paymentFormSection" class="glass-form" style="display: none; margin-top: 20px;">
+                <h3>Record Payment</h3>
+                <div class="form-group">
+                    <label for="paymentAmount">Amount Paid (LKR)</label>
+                    <input type="number" id="paymentAmount" step="0.01" placeholder="0.00">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-primary" onclick="submitLoanPayment()">Submit Payment</button>
+                    <button class="btn btn-secondary" onclick="hidePaymentForm()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <span class="close" onclick="closeReportModal()">&times;</span>
+            <h2><i class="fas fa-chart-pie"></i> Business Reports</h2>
+
+            <div class="report-tabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button class="btn btn-secondary" onclick="showReport('sales')">Monthly Sales</button>
+                <button class="btn btn-secondary" onclick="showReport('credit')">Total Credit</button>
+                <button class="btn btn-secondary" onclick="showReport('stock')">Stock Report</button>
+                <button class="btn btn-secondary" onclick="showReport('security')"><i class="fas fa-user-shield"></i>
+                    Security</button>
+            </div>
+
+            <div id="reportDisplayArea" class="glass-form" style="min-height: 300px; padding: 25px;">
+                <!-- Report content will be loaded here -->
+            </div>
+
+            <div class="modal-actions" style="margin-top: 20px; text-align: right;">
+                <button class="btn btn-primary" onclick="printCurrentReport()">
+                    <i class="fas fa-print"></i> Print Report
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scanner Modal -->
+    <div id="scannerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeScanner()">&times;</span>
+            <h2><i class="fas fa-camera"></i> Scan Product QR</h2>
+            <div id="reader" style="width: 100%; border-radius: 12px; overflow: hidden; margin: 20px 0;"></div>
+            <p id="scannerStatus" style="text-align: center; color: var(--text-muted);">Initializing camera...</p>
+        </div>
+    </div>
+
+    <script src="js/products.js"></script>
+    <script src="js/customers.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/sales.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

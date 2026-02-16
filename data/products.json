@@ -1,0 +1,67 @@
+{
+    "products": [
+        {
+            "id": 1,
+            "name": "Fresh Tomatoes",
+            "price": 2.99,
+            "category": "vegetables",
+            "stock": 50
+        },
+        {
+            "id": 2,
+            "name": "Organic Apples",
+            "price": 3.49,
+            "category": "fruits",
+            "stock": 40
+        },
+        {
+            "id": 3,
+            "name": "Whole Milk",
+            "price": 3.99,
+            "category": "dairy",
+            "stock": 30
+        },
+        {
+            "id": 4,
+            "name": "Fresh Bread",
+            "price": 2.49,
+            "category": "bakery",
+            "stock": 20
+        },
+        {
+            "id": 5,
+            "name": "Orange Juice",
+            "price": 4.99,
+            "category": "beverages",
+            "stock": 25
+        },
+        {
+            "id": 6,
+            "name": "Potato Chips",
+            "price": 2.99,
+            "category": "snacks",
+            "stock": 60
+        },
+        {
+            "id": 7,
+            "name": "Bananas",
+            "price": 1.99,
+            "category": "fruits",
+            "stock": 45
+        },
+        {
+            "id": 8,
+            "name": "Eggs (12)",
+            "price": 4.49,
+            "category": "dairy",
+            "stock": 35
+        },
+        {
+            "id": 9,
+            "name": "Sugar",
+            "price": 250.00,
+            "category": "snacks",
+            "stock": 100
+        }
+    ]
+}
