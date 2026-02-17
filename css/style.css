@@ -881,3 +881,8 @@ body {
     letter-spacing: 5px;
 }
 
+
+/* Scroll Fix */
+.modal { overflow-y: auto !important; padding: 20px 0 !important; }
+.modal-content { max-width: 600px !important; margin: 40px auto !important; }
+.modal-list { max-height: 400px !important; overflow-y: auto !important; margin-top: 15px !important; }

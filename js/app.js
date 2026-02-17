@@ -352,16 +352,18 @@ function printReceipt() {
 // Product Management Functions
 function openProductModal() {
     document.getElementById('productModal').style.display = 'block';
+    renderProductListInModal();
 }
 
 function closeProductModal() {
     document.getElementById('productModal').style.display = 'none';
-    document.getElementById('productForm').reset();
+    resetProductForm();
 }
 
 function handleProductSubmit(e) {
     e.preventDefault();
 
+    const productId = document.getElementById('pId').value;
     const productData = {
         name: document.getElementById('pName').value,
         price: document.getElementById('pPrice').value,
@@ -369,15 +371,92 @@ function handleProductSubmit(e) {
         stock: document.getElementById('pStock').value
     };
 
-    Products.addProduct(productData);
+    if (productId) {
+        // Update mode
+        Products.updateProduct(productId, productData);
+        alert('Product updated successfully!');
+    } else {
+        // Add mode
+        Products.addProduct(productData);
+        alert('Product added successfully!');
+    }
 
-    // Refresh products display
+    // Refresh display
     displayProducts(Products.getAllProducts());
+    renderProductListInModal();
 
-    // Close modal
-    closeProductModal();
+    // Reset form
+    resetProductForm();
+}
 
-    alert('Product added successfully!');
+function renderProductListInModal() {
+    const list = document.getElementById('modalProductList');
+    const products = Products.getAllProducts();
+    list.innerHTML = '';
+
+    if (products.length === 0) {
+        list.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 10px;">No products available.</p>';
+        return;
+    }
+
+    products.forEach(product => {
+        const item = document.createElement('div');
+        item.className = 'customer-item'; // Reusing customer-item styles for consistency
+        item.style.padding = '10px';
+        item.style.marginBottom = '10px';
+        item.innerHTML = `
+            <div class="customer-info">
+                <h4 style="margin: 0;">${product.name}</h4>
+                <p style="margin: 5px 0 0 0; font-size: 13px;">
+                    LKR ${product.price.toFixed(2)} | Stock: ${product.stock} | ${product.category}
+                </p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary btn-sm" onclick="editProduct(${product.id})" title="Edit">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="confirmDeleteProduct(${product.id})" title="Delete" style="background-color: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        list.appendChild(item);
+    });
+}
+
+function editProduct(id) {
+    const product = Products.getProductById(id);
+    if (!product) return;
+
+    document.getElementById('pId').value = product.id;
+    document.getElementById('pName').value = product.name;
+    document.getElementById('pPrice').value = product.price;
+    document.getElementById('pCategory').value = product.category;
+    document.getElementById('pStock').value = product.stock;
+
+    // UI Updates
+    document.getElementById('productFormBtn').innerHTML = '<i class="fas fa-save"></i> Update Product';
+    document.getElementById('cancelEditBtn').style.display = 'inline-block';
+
+    // Scroll to form
+    document.getElementById('productForm').scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetProductForm() {
+    const form = document.getElementById('productForm');
+    form.reset();
+    document.getElementById('pId').value = '';
+    document.getElementById('productFormBtn').innerHTML = '<i class="fas fa-save"></i> Save Product';
+    document.getElementById('cancelEditBtn').style.display = 'none';
+}
+
+function confirmDeleteProduct(id) {
+    if (confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+        Products.deleteProduct(id);
+        displayProducts(Products.getAllProducts());
+        renderProductListInModal();
+        alert('Product deleted successfully!');
+    }
 }
 
 // Customer Management Functions
