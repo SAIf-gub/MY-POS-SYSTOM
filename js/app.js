@@ -44,10 +44,25 @@ function displayProducts(products) {
         const productCard = document.createElement('div');
         productCard.className = 'product-card';
         productCard.onclick = () => Cart.addItem(product);
+
+        const weightLabel = product.weight
+            ? `<span class="product-weight-badge">${product.weight}${product.weightUnit || 'g'}</span>`
+            : '';
+
+        const photoHtml = product.photo
+            ? `<img class="product-card-img" src="${product.photo}" alt="${product.name}">`
+            : `<div class="product-card-img-placeholder"><i class="fas fa-image"></i></div>`;
+
         productCard.innerHTML = `
-            <h3>${product.name}</h3>
-            <div class="product-price">LKR ${product.price.toFixed(2)}</div>
-            <small>Stock: ${product.stock}</small>
+            ${photoHtml}
+            <div class="product-card-body">
+                <h3>${product.name}</h3>
+                <div class="product-price">LKR ${product.price.toFixed(2)}</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                    <small>Stock: ${product.stock}</small>
+                    ${weightLabel}
+                </div>
+            </div>
         `;
         productsGrid.appendChild(productCard);
     });
@@ -139,6 +154,7 @@ function setupEventListeners() {
         if (e.target === document.getElementById('customerModal')) closeCustomerModal();
         if (e.target === document.getElementById('customerDetailsModal')) closeDetailsModal();
         if (e.target === document.getElementById('reportModal')) closeReportModal();
+        if (e.target === document.getElementById('receiptRecordsModal')) closeReceiptRecords();
     });
 
     // Auth Listeners
@@ -171,6 +187,21 @@ function filterProducts(query, category) {
     }
 
     displayProducts(products);
+}
+
+// Category tab switching
+function setActiveTab(tabEl, category) {
+    // Update active class on all tabs
+    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+    tabEl.classList.add('active');
+
+    // Sync hidden select (keeps existing filter logic working)
+    const sel = document.getElementById('categoryFilter');
+    if (sel) sel.value = category;
+
+    // Re-filter with current search query
+    const query = document.getElementById('searchInput').value;
+    filterProducts(query, category);
 }
 
 // Update date and time
@@ -258,7 +289,8 @@ function completePayment() {
     displayProducts(Products.getAllProducts());
 
     // Generate receipt
-    generateReceipt(paymentMethod, customerId);
+    const amountPaid = paymentMethod === 'cash' ? (parseFloat(document.getElementById('amountReceived').value) || 0) : (paymentMethod === 'card' ? Cart.getTotal() : 0);
+    generateReceipt(paymentMethod, customerId, amountPaid);
 
     // Record sale in history
     const saleData = {
@@ -277,53 +309,120 @@ function completePayment() {
     document.getElementById('receiptModal').style.display = 'block';
 }
 
-function generateReceipt(paymentMethod, customerId) {
+function generateReceipt(paymentMethod, customerId, amountPaid) {
     const now = new Date();
     const receiptContent = document.getElementById('receiptContent');
     const customer = customerId ? Customers.getCustomerById(customerId) : null;
+    const total = Cart.getTotal();
+    const subtotal = Cart.getSubtotal();
+    const discount = Cart.discount;
+
+    // Save receipt record BEFORE clearing cart
+    const receiptRecord = Sales.saveReceipt({
+        items: Cart.items.map(i => ({ name: i.product.name, price: i.product.price, qty: i.quantity })),
+        subtotal: subtotal,
+        discount: discount,
+        total: total,
+        paymentMethod: paymentMethod,
+        amountPaid: paymentMethod === 'cash' ? amountPaid : (paymentMethod === 'card' ? total : 0),
+        customerName: customer ? customer.name : null,
+        customerId: customerId || null
+    });
 
     let receiptHTML = `
         <div class="receipt-header">
             <h3>IHSAN LUCKY STORE</h3>
-            ${customer ? `<p>Customer: ${customer.name}</p>` : ''}
-            <p>${now.toLocaleString()}</p>
-            <p>Receipt #${Math.floor(Math.random() * 10000)}</p>
+            <p>KOLLANDALWA KADIGAWA NIKAWERATIYA</p>
+            <div class="receipt-separator">***************************************************</div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                <span>Net(Rs) :</span>
+                <span>${total.toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div class="receipt-separator">***************************************************</div>
+            <p style="text-align: left; margin: 10px 0 5px 0; font-weight: bold;">VAT LIABLE PRODUCTS(Inclusive VAT) :</p>
         </div>
+        
+        <div class="receipt-table-header">
+            <span>NO</span>
+            <span>UNIT</span>
+            <span>QTY</span>
+            <span>RATE</span>
+            <span>AMOUNT</span>
+        </div>
+
         <div class="receipt-items">
     `;
 
-    Cart.items.forEach(item => {
+    Cart.items.forEach((item, index) => {
+        const itemTotal = item.product.price * item.quantity;
         receiptHTML += `
-            <div class="receipt-item">
-                <span>${item.product.name} x${item.quantity}</span>
-                <span>LKR ${(item.product.price * item.quantity).toFixed(2)}</span>
+            <div class="receipt-item-group">
+                <div class="receipt-item-name-row">
+                    ${index + 1} ${item.product.name.toUpperCase()}
+                </div>
+                <div class="receipt-item-data-row">
+                    <span></span>
+                    <span>PKT</span>
+                    <span>${item.quantity}</span>
+                    <span>${item.product.price.toFixed(2)}</span>
+                    <span>${itemTotal.toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
+                </div>
             </div>
         `;
     });
 
     receiptHTML += `
         </div>
-        <div class="receipt-item">
-            <span>Subtotal:</span>
-            <span>LKR ${Cart.getSubtotal().toFixed(2)}</span>
+        
+        <div class="receipt-summary">
+            <div class="receipt-row">
+                <span>Subtotal:</span>
+                <span>${subtotal.toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
+            </div>
+            ${discount > 0 ? `
+            <div class="receipt-row">
+                <span>Discount:</span>
+                <span>- ${discount.toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
+            </div>` : ''}
+            <div class="receipt-total-row">
+                <span>Total:</span>
+                <span>${total.toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
+            </div>
+            
+            <div class="receipt-row">
+                <span>Payment:</span>
+                <span>${paymentMethod.toUpperCase()}</span>
+            </div>
+            
+            <div class="receipt-row">
+                <span>Received:</span>
+                <span>${amountPaid.toFixed(2)}</span>
+            </div>
+            
+            <div class="receipt-row">
+                <span>Change:</span>
+                <span>${Math.max(0, amountPaid - total).toFixed(2)}</span>
+            </div>
+            
+            <div class="receipt-row" style="margin-top: 10px; font-weight: bold;">
+                <span>NET TOTAL B/F RETURN</span>
+                <span>${total.toLocaleString('en-LK', { minimumFractionDigits: 2 })}</span>
+            </div>
         </div>
-        ${Cart.discount > 0 ? `
-        <div class="receipt-item">
-            <span>Discount:</span>
-            <span>- LKR ${Cart.discount.toFixed(2)}</span>
-        </div>` : ''}
-        <div class="receipt-item receipt-total">
-            <span>Total:</span>
-            <span>LKR ${Cart.getTotal().toFixed(2)}</span>
+
+        <div class="receipt-footer">
+            <div class="receipt-separator">...................................................</div>
+            <p>DATE: ${now.toLocaleDateString()} TIME: ${now.toLocaleTimeString()}</p>
+            <p>RECEIPT #${receiptRecord.receiptNo}</p>
+            ${customer ? `<p>CUSTOMER: ${customer.name.toUpperCase()}</p>` : ''}
+            <div class="receipt-separator">...................................................</div>
+            <p style="margin-top: 10px;">EXPIRY : .........................................</p>
+            <p style="margin-top: 10px; font-weight: bold;">THANK YOU FOR SHOPPING WITH US!</p>
         </div>
-        <div class="receipt-item">
-            <span>Payment Method:</span>
-            <span>${paymentMethod.toUpperCase()}</span>
-        </div>
-        <p style="text-align: center; margin-top: 20px;">Thank you for shopping with us!</p>
     `;
 
     receiptContent.innerHTML = receiptHTML;
+
 
     // Clear cart after payment
     Cart.clearCart();
@@ -350,6 +449,27 @@ function printReceipt() {
 }
 
 // Product Management Functions
+let currentPhotoBase64 = '';
+
+function previewProductPhoto(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        currentPhotoBase64 = e.target.result;
+        document.getElementById('pPhotoImg').src = currentPhotoBase64;
+        document.getElementById('pPhotoPreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearProductPhoto() {
+    currentPhotoBase64 = '';
+    document.getElementById('pPhoto').value = '';
+    document.getElementById('pPhotoImg').src = '';
+    document.getElementById('pPhotoPreview').style.display = 'none';
+}
+
 function openProductModal() {
     document.getElementById('productModal').style.display = 'block';
     renderProductListInModal();
@@ -368,7 +488,11 @@ function handleProductSubmit(e) {
         name: document.getElementById('pName').value,
         price: document.getElementById('pPrice').value,
         category: document.getElementById('pCategory').value,
-        stock: document.getElementById('pStock').value
+        stock: document.getElementById('pStock').value,
+        barcode: document.getElementById('pBarcode').value,
+        photo: currentPhotoBase64,
+        weight: document.getElementById('pWeight').value,
+        weightUnit: document.getElementById('pWeightUnit').value
     };
 
     if (productId) {
@@ -408,7 +532,8 @@ function renderProductListInModal() {
             <div class="customer-info">
                 <h4 style="margin: 0;">${product.name}</h4>
                 <p style="margin: 5px 0 0 0; font-size: 13px;">
-                    LKR ${product.price.toFixed(2)} | Stock: ${product.stock} | ${product.category}
+                    LKR ${product.price.toFixed(2)} | Stock: ${product.stock} | ${product.category} | Barcode: ${product.barcode || 'N/A'}
+                    ${product.weight ? `| ${product.weight}${product.weightUnit}` : ''}
                 </p>
             </div>
             <div style="display: flex; gap: 8px;">
@@ -433,6 +558,17 @@ function editProduct(id) {
     document.getElementById('pPrice').value = product.price;
     document.getElementById('pCategory').value = product.category;
     document.getElementById('pStock').value = product.stock;
+    document.getElementById('pBarcode').value = product.barcode || '';
+    document.getElementById('pWeight').value = product.weight || '';
+    document.getElementById('pWeightUnit').value = product.weightUnit || 'g';
+    // Show existing photo
+    if (product.photo) {
+        currentPhotoBase64 = product.photo;
+        document.getElementById('pPhotoImg').src = product.photo;
+        document.getElementById('pPhotoPreview').style.display = 'block';
+    } else {
+        clearProductPhoto();
+    }
 
     // UI Updates
     document.getElementById('productFormBtn').innerHTML = '<i class="fas fa-save"></i> Update Product';
@@ -448,6 +584,7 @@ function resetProductForm() {
     document.getElementById('pId').value = '';
     document.getElementById('productFormBtn').innerHTML = '<i class="fas fa-save"></i> Save Product';
     document.getElementById('cancelEditBtn').style.display = 'none';
+    clearProductPhoto();
 }
 
 function confirmDeleteProduct(id) {
@@ -990,9 +1127,17 @@ function onScanSuccess(decodedText, decodedResult) {
     // Stop scanner on success
     closeScanner();
 
-    // Process scanned text (assuming it's a product ID)
-    const productId = parseInt(decodedText);
-    const product = Products.getProductById(productId);
+    // Process scanned text
+    // Try barcode first
+    let product = Products.getProductByBarcode(decodedText);
+
+    // If not found by barcode, try parsing as ID (for backward compatibility with old QR codes)
+    if (!product) {
+        const productId = parseInt(decodedText);
+        if (!isNaN(productId)) {
+            product = Products.getProductById(productId);
+        }
+    }
 
     if (product) {
         Cart.addItem(product);
@@ -1009,3 +1154,262 @@ function onScanSuccess(decodedText, decodedResult) {
         alert('Product not found: ' + decodedText);
     }
 }
+
+// =============================================
+// Receipt Records Functions
+// =============================================
+
+function openReceiptRecords() {
+    document.getElementById('receiptRecordsModal').style.display = 'block';
+    renderReceiptRecords('');
+}
+
+function closeReceiptRecords() {
+    document.getElementById('receiptRecordsModal').style.display = 'none';
+}
+
+function renderReceiptRecords(searchQuery) {
+    const list = document.getElementById('receiptRecordsList');
+    let receipts = [...Sales.getReceipts()].reverse(); // newest first
+
+    if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        receipts = receipts.filter(r =>
+            String(r.receiptNo).includes(q) ||
+            (r.customerName && r.customerName.toLowerCase().includes(q)) ||
+            r.paymentMethod.toLowerCase().includes(q)
+        );
+    }
+
+    if (receipts.length === 0) {
+        list.innerHTML = `<p style="text-align:center;color:var(--text-muted);padding:30px;">No receipt records found.</p>`;
+        return;
+    }
+
+    list.innerHTML = receipts.map(r => {
+        const date = new Date(r.date);
+        const methodIcon = r.paymentMethod === 'cash' ? 'fa-money-bill-wave' :
+            r.paymentMethod === 'card' ? 'fa-credit-card' : 'fa-handshake';
+        const methodColor = r.paymentMethod === 'cash' ? '#22c55e' :
+            r.paymentMethod === 'card' ? '#3b82f6' : '#f59e0b';
+        return `
+        <div class="receipt-record-item" onclick="viewReceiptDetail(${r.id})">
+            <div class="rr-left">
+                <div class="rr-no"><i class="fas fa-receipt"></i> #${r.receiptNo}</div>
+                <div class="rr-date">${date.toLocaleDateString()} ${date.toLocaleTimeString()}</div>
+                ${r.customerName ? `<div class="rr-customer"><i class="fas fa-user"></i> ${r.customerName}</div>` : '<div class="rr-customer" style="color:var(--text-muted);">Guest</div>'}
+            </div>
+            <div class="rr-right">
+                <div class="rr-total">LKR ${r.total.toFixed(2)}</div>
+                <div class="rr-method" style="color:${methodColor};"><i class="fas ${methodIcon}"></i> ${r.paymentMethod.toUpperCase()}</div>
+                <div class="rr-view-btn"><i class="fas fa-eye"></i> View</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function viewReceiptDetail(receiptId) {
+    const r = Sales.getReceiptById(receiptId);
+    if (!r) return;
+
+    const date = new Date(r.date);
+    const receiptContent = document.getElementById('receiptContent');
+
+    let itemsHTML = r.items.map(item => `
+        <div class="receipt-item">
+            <span>${item.name} x${item.qty}</span>
+            <span>LKR ${(item.price * item.qty).toFixed(2)}</span>
+        </div>`).join('');
+
+    let balanceColor = r.paymentMethod === 'loan' ? '#ef4444' : '#22c55e';
+    let amountPaidDisplay = r.amountPaid > 0 ? `LKR ${r.amountPaid.toFixed(2)}` : 'LKR 0.00';
+
+    receiptContent.innerHTML = `
+        <div class="receipt-header">
+            <h3>IHSAN LUCKY STORE</h3>
+            ${r.customerName ? `<p>Customer: ${r.customerName}</p>` : ''}
+            <p>${date.toLocaleString()}</p>
+            <p>Receipt #${r.receiptNo}</p>
+        </div>
+        <div class="receipt-items">${itemsHTML}</div>
+        <div class="receipt-item"><span>Subtotal:</span><span>LKR ${r.subtotal.toFixed(2)}</span></div>
+        ${r.discount > 0 ? `<div class="receipt-item"><span>Discount:</span><span>- LKR ${r.discount.toFixed(2)}</span></div>` : ''}
+        <div class="receipt-item receipt-total"><span>Total:</span><span>LKR ${r.total.toFixed(2)}</span></div>
+        <div class="receipt-item"><span>Payment Method:</span><span>${r.paymentMethod.toUpperCase()}</span></div>
+        <div class="receipt-item"><span>Amount Paid:</span><span>${amountPaidDisplay}</span></div>
+        <div class="receipt-item" style="color:${balanceColor};font-weight:bold;">
+            <span>${r.balanceLabel}:</span>
+            <span>LKR ${r.balanceAmount.toFixed(2)}</span>
+        </div>
+        <p style="text-align:center;margin-top:20px;">Thank you for shopping with us!</p>
+    `;
+
+    // Close records modal, open receipt modal for viewing/printing
+    closeReceiptRecords();
+    document.getElementById('receiptModal').style.display = 'block';
+}
+
+// =============================================
+// SETTINGS — Theme & Appearance
+// =============================================
+
+const THEMES = {
+    green: {
+        label: 'Forest Green',
+        primary: '#4CAF50',
+        primaryDark: '#388E3C',
+        primaryLight: '#E8F5E9',
+        accent: '#43A047',
+        swatch: '#4CAF50'
+    },
+    blue: {
+        label: 'Ocean Blue',
+        primary: '#2196F3',
+        primaryDark: '#1565C0',
+        primaryLight: '#E3F2FD',
+        accent: '#1E88E5',
+        swatch: '#2196F3'
+    },
+    purple: {
+        label: 'Royal Purple',
+        primary: '#7C3AED',
+        primaryDark: '#5B21B6',
+        primaryLight: '#EDE9FE',
+        accent: '#6D28D9',
+        swatch: '#7C3AED'
+    },
+    orange: {
+        label: 'Sunset Orange',
+        primary: '#F97316',
+        primaryDark: '#C2410C',
+        primaryLight: '#FFF7ED',
+        accent: '#EA7000',
+        swatch: '#F97316'
+    },
+    red: {
+        label: 'Crimson Red',
+        primary: '#EF4444',
+        primaryDark: '#B91C1C',
+        primaryLight: '#FEF2F2',
+        accent: '#DC2626',
+        swatch: '#EF4444'
+    },
+    teal: {
+        label: 'Deep Teal',
+        primary: '#0D9488',
+        primaryDark: '#0F766E',
+        primaryLight: '#F0FDFA',
+        accent: '#14B8A6',
+        swatch: '#0D9488'
+    },
+    pink: {
+        label: 'Rose Pink',
+        primary: '#EC4899',
+        primaryDark: '#BE185D',
+        primaryLight: '#FDF2F8',
+        accent: '#DB2777',
+        swatch: '#EC4899'
+    },
+    slate: {
+        label: 'Slate Dark',
+        primary: '#475569',
+        primaryDark: '#1E293B',
+        primaryLight: '#F1F5F9',
+        accent: '#334155',
+        swatch: '#475569'
+    }
+};
+
+function applyTheme(themeKey) {
+    const theme = THEMES[themeKey];
+    if (!theme) return;
+
+    const root = document.documentElement;
+    root.style.setProperty('--primary', theme.primary);
+    root.style.setProperty('--primary-dark', theme.primaryDark);
+    root.style.setProperty('--primary-light', theme.primaryLight);
+    root.style.setProperty('--accent', theme.accent);
+
+    // Persist
+    localStorage.setItem('pos_theme', themeKey);
+
+    // Update swatch active state
+    document.querySelectorAll('.theme-swatch-btn').forEach(btn => {
+        btn.style.outline = btn.dataset.theme === themeKey
+            ? `3px solid ${theme.primary}`
+            : '3px solid transparent';
+        btn.style.outlineOffset = '2px';
+    });
+}
+
+function renderThemeSwatches() {
+    const container = document.getElementById('themeSwatches');
+    if (!container) return;
+
+    const savedTheme = localStorage.getItem('pos_theme') || 'green';
+    container.innerHTML = '';
+
+    Object.entries(THEMES).forEach(([key, theme]) => {
+        const btn = document.createElement('button');
+        btn.className = 'theme-swatch-btn';
+        btn.dataset.theme = key;
+        btn.title = theme.label;
+        btn.style.cssText = `
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 12px;
+            background: ${theme.swatch};
+            border: none;
+            cursor: pointer;
+            transition: transform 0.15s, outline 0.15s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 6px;
+            outline: 3px solid ${key === savedTheme ? theme.swatch : 'transparent'};
+            outline-offset: 2px;
+        `;
+        btn.innerHTML = `
+            <span style="font-size: 20px; color: white; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));">
+                ${key === savedTheme ? '<i class="fas fa-check"></i>' : ''}
+            </span>
+            <span style="font-size: 11px; font-weight: 700; color: white; text-shadow: 0 1px 3px rgba(0,0,0,0.4); text-align:center; line-height: 1.2;">${theme.label}</span>
+        `;
+        btn.onmouseover = () => btn.style.transform = 'scale(1.08)';
+        btn.onmouseout = () => btn.style.transform = 'scale(1)';
+        btn.onclick = () => {
+            applyTheme(key);
+            // Refresh check marks
+            renderThemeSwatches();
+        };
+        container.appendChild(btn);
+    });
+}
+
+function setFontSize(size) {
+    const sizes = { small: '13px', normal: '15px', large: '17px' };
+    document.documentElement.style.fontSize = sizes[size] || '15px';
+    localStorage.setItem('pos_font_size', size);
+}
+
+function loadSavedSettings() {
+    const savedTheme = localStorage.getItem('pos_theme') || 'green';
+    applyTheme(savedTheme);
+
+    const savedFont = localStorage.getItem('pos_font_size') || 'normal';
+    setFontSize(savedFont);
+}
+
+function openSettingsModal() {
+    document.getElementById('settingsModal').style.display = 'block';
+    renderThemeSwatches();
+}
+
+function closeSettingsModal() {
+    document.getElementById('settingsModal').style.display = 'none';
+}
+
+// Load settings on startup — called from initializeApp
+document.addEventListener('DOMContentLoaded', loadSavedSettings);

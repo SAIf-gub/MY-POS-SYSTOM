@@ -1,23 +1,14 @@
-/* Custom Styles and Fixes */
+/* ===================================================
+   CUSTOM OVERRIDES — Green/White POS Theme
+   =================================================== */
 
-/* Background Image with Dark Overlay */
+/* Ensure body has no dark background image */
 body {
-    background-image:
-        linear-gradient(rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.85)),
-        url('background.jpg') !important;
-    background-size: cover !important;
-    background-position: center !important;
-    background-attachment: fixed !important;
+    background-color: #F0F2F5 !important;
+    background-image: none !important;
 }
 
-/* Ensure glassmorphism looks good with the background image */
-.glass {
-    background: rgba(30, 41, 59, 0.7) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-}
-
-/* Modal Scroll Fix (redundancy if style.css failed) */
+/* Modal scroll fix */
 .modal {
     overflow-y: auto !important;
     padding: 20px 0 !important;
@@ -32,4 +23,149 @@ body {
     max-height: 400px !important;
     overflow-y: auto !important;
     margin-top: 15px !important;
+}
+
+/* ===================================================
+   RECEIPT RECORDS LIST
+   =================================================== */
+.receipt-records-list {
+    max-height: 500px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.receipt-record-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.receipt-record-item:hover {
+    background: var(--primary-light);
+    border-color: var(--primary);
+}
+
+.rr-left {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.rr-no {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--primary);
+}
+
+.rr-date {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.rr-customer {
+    font-size: 13px;
+    color: var(--text-sub);
+}
+
+.rr-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.rr-total {
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--text-main);
+}
+
+.rr-method {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.rr-view-btn {
+    font-size: 12px;
+    color: var(--primary);
+    opacity: 0.8;
+}
+
+/* ===================================================
+   PRODUCT CARD — Photo & Weight Styles
+   =================================================== */
+.product-card {
+    padding: 0 !important;
+    min-height: 190px;
+}
+
+.product-card-img {
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    display: block;
+    border-radius: 10px 10px 0 0;
+}
+
+.product-card-img-placeholder {
+    width: 100%;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+    border-radius: 10px 10px 0 0;
+    font-size: 38px;
+    color: #cbd5e1;
+}
+
+.product-card-body {
+    padding: 10px 12px 12px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+}
+
+.product-card-body h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    line-height: 1.3;
+}
+
+.product-weight-badge {
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(76, 175, 80, 0.12);
+    color: var(--primary-dark);
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+/* ===================================================
+   REPORT TABS
+   =================================================== */
+.report-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.report-tabs .btn {
+    flex: none;
+    padding: 8px 16px;
+    font-size: 13px;
 }

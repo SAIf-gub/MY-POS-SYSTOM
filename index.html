@@ -10,6 +10,7 @@
     <meta name="keywords" content="POS, Supermarket, Retail, Inventory Management, Glassmorphism, Web App">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/custom.css">
+    <link rel="stylesheet" href="css/receipt.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
@@ -53,7 +54,7 @@
             </div>
             <div class="header-actions">
                 <button id="scanQrBtn" class="btn btn-primary" onclick="openScanner()">
-                    <i class="fas fa-qrcode"></i> Scan QR
+                    <i class="fas fa-barcode"></i> Scan Barcode
                 </button>
                 <button id="manageProductsBtn" class="btn btn-secondary" onclick="openProductModal()">
                     <i class="fas fa-edit"></i> Manage Products
@@ -63,6 +64,12 @@
                 </button>
                 <button id="reportsBtn" class="btn btn-secondary" onclick="openReportModal()">
                     <i class="fas fa-chart-line"></i> Reports
+                </button>
+                <button id="receiptRecordsBtn" class="btn btn-secondary" onclick="openReceiptRecords()">
+                    <i class="fas fa-receipt"></i> Receipts
+                </button>
+                <button class="btn btn-secondary" onclick="openSettingsModal()" title="Settings">
+                    <i class="fas fa-cog"></i> Settings
                 </button>
                 <div class="datetime">
                     <div id="date"></div>
@@ -74,10 +81,10 @@
         <!-- Main POS Area -->
         <div class="pos-container">
             <!-- Products Section -->
-            <div class="products-section glass">
+            <div class="products-section">
                 <div class="search-bar">
-                    <input type="text" id="searchInput" placeholder="Search products...">
-                    <select id="categoryFilter">
+                    <input type="text" id="searchInput" placeholder="&#128269; Search products...">
+                    <select id="categoryFilter" style="display:none;">
                         <option value="all">All Categories</option>
                         <option value="vegetables">Vegetables</option>
                         <option value="fruits">Fruits</option>
@@ -85,17 +92,46 @@
                         <option value="bakery">Bakery</option>
                         <option value="beverages">Beverages</option>
                         <option value="snacks">Snacks</option>
+                        <option value="others">Others</option>
                     </select>
                 </div>
 
                 <div class="products-grid" id="productsGrid">
                     <!-- Products will be loaded here -->
                 </div>
+
+                <!-- Category Tab Bar -->
+                <div class="category-tabs" id="categoryTabs">
+                    <button class="category-tab active" onclick="setActiveTab(this, 'all')">
+                        <i class="fas fa-th"></i> ALL
+                    </button>
+                    <button class="category-tab" onclick="setActiveTab(this, 'vegetables')">
+                        <i class="fas fa-carrot"></i> VEGETABLES
+                    </button>
+                    <button class="category-tab" onclick="setActiveTab(this, 'fruits')">
+                        <i class="fas fa-apple-alt"></i> FRUITS
+                    </button>
+                    <button class="category-tab" onclick="setActiveTab(this, 'dairy')">
+                        <i class="fas fa-cheese"></i> DAIRY
+                    </button>
+                    <button class="category-tab" onclick="setActiveTab(this, 'bakery')">
+                        <i class="fas fa-bread-slice"></i> BAKERY
+                    </button>
+                    <button class="category-tab" onclick="setActiveTab(this, 'beverages')">
+                        <i class="fas fa-coffee"></i> BEVERAGES
+                    </button>
+                    <button class="category-tab" onclick="setActiveTab(this, 'snacks')">
+                        <i class="fas fa-cookie-bite"></i> SNACKS
+                    </button>
+                    <button class="category-tab" onclick="setActiveTab(this, 'others')">
+                        <i class="fas fa-box"></i> OTHERS
+                    </button>
+                </div>
             </div>
 
-            <!-- Cart Section -->
-            <div class="cart-section glass">
-                <h2><i class="fas fa-shopping-cart"></i> Current Sale</h2>
+            <!-- Cart / Ticket Section -->
+            <div class="cart-section">
+                <h2><i class="fas fa-receipt"></i> Ticket</h2>
 
                 <div class="cart-items" id="cartItems">
                     <!-- Cart items will appear here -->
@@ -114,18 +150,18 @@
                         <span>Total:</span>
                         <span id="total">LKR 0.00</span>
                     </div>
-                    <div class="form-group discount-input-group" style="margin-top: 15px;">
-                        <label for="discountInput">Add Discount (LKR)</label>
+                    <div class="discount-input-group" style="margin-top: 12px;">
+                        <label for="discountInput">Discount (LKR)</label>
                         <input type="number" id="discountInput" placeholder="0.00" step="0.01" min="0">
                     </div>
                 </div>
 
                 <div class="cart-actions">
-                    <button id="checkoutBtn" class="btn btn-primary">
-                        <i class="fas fa-cash-register"></i> Checkout
+                    <button id="clearCartBtn" class="btn btn-secondary" style="border-radius:0;">
+                        <i class="fas fa-trash"></i> CLEAR
                     </button>
-                    <button id="clearCartBtn" class="btn btn-secondary">
-                        <i class="fas fa-trash"></i> Clear
+                    <button id="checkoutBtn" class="btn btn-primary" style="border-radius:0; flex:2;">
+                        <i class="fas fa-cash-register"></i> CHARGE
                     </button>
                 </div>
             </div>
@@ -213,11 +249,39 @@
                         <option value="bakery">Bakery</option>
                         <option value="beverages">Beverages</option>
                         <option value="snacks">Snacks</option>
+                        <option value="others">Others</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="pStock">Initial Stock</label>
                     <input type="number" id="pStock" required placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="pBarcode">Barcode / QR Code</label>
+                    <input type="text" id="pBarcode" placeholder="Scan or type barcode">
+                </div>
+                <div class="form-group">
+                    <label>Weight</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="number" id="pWeight" placeholder="e.g. 500" step="0.01" min="0" style="flex: 1;">
+                        <select id="pWeightUnit" style="width: 100px;">
+                            <option value="g">Gram (g)</option>
+                            <option value="kg">Kilogram (kg)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="pPhoto">Product Photo</label>
+                    <input type="file" id="pPhoto" accept="image/*" onchange="previewProductPhoto(event)"
+                        style="padding: 8px;">
+                    <div id="pPhotoPreview" style="margin-top: 10px; display: none;">
+                        <img id="pPhotoImg" src="" alt="Product Preview"
+                            style="width: 100%; max-height: 150px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <button type="button" onclick="clearProductPhoto()"
+                            style="margin-top: 6px; background: #ef4444; color: #fff; border: none; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                            <i class="fas fa-times"></i> Remove Photo
+                        </button>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-primary" id="productFormBtn">
                     <i class="fas fa-save"></i> Save Product
@@ -361,13 +425,57 @@
         </div>
     </div>
 
+    <!-- Receipt Records Modal -->
+    <div id="receiptRecordsModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <span class="close" onclick="closeReceiptRecords()">&times;</span>
+            <h2><i class="fas fa-receipt"></i> Receipt Records</h2>
+
+            <div class="search-bar" style="margin-bottom: 20px;">
+                <input type="text" id="receiptSearchInput"
+                    placeholder="Search by receipt #, customer, or payment method..."
+                    oninput="renderReceiptRecords(this.value)">
+            </div>
+
+            <div id="receiptRecordsList" class="receipt-records-list">
+                <!-- Receipt records will be loaded here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Scanner Modal -->
     <div id="scannerModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeScanner()">&times;</span>
-            <h2><i class="fas fa-camera"></i> Scan Product QR</h2>
+            <h2><i class="fas fa-barcode"></i> Scan Product Barcode/QR</h2>
             <div id="reader" style="width: 100%; border-radius: 12px; overflow: hidden; margin: 20px 0;"></div>
             <p id="scannerStatus" style="text-align: center; color: var(--text-muted);">Initializing camera...</p>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content" style="max-width: 480px;">
+            <span class="close" onclick="closeSettingsModal()">&times;</span>
+            <h2><i class="fas fa-palette"></i> Appearance Settings</h2>
+
+            <p style="color: var(--text-sub); margin-bottom: 20px; font-size: 14px;">Choose a color theme for your POS
+                dashboard.</p>
+
+            <div id="themeSwatches"
+                style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px;">
+                <!-- Swatches rendered by JS -->
+            </div>
+
+            <h3 style="font-size: 15px; margin-bottom: 14px; color: var(--text-sub);">Font Size</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+                <button class="btn btn-secondary" onclick="setFontSize('small')" style="flex:1;"><i class="fas fa-font"
+                        style="font-size:11px;"></i> Small</button>
+                <button class="btn btn-secondary" onclick="setFontSize('normal')" style="flex:1;"><i
+                        class="fas fa-font"></i> Normal</button>
+                <button class="btn btn-secondary" onclick="setFontSize('large')" style="flex:1;"><i class="fas fa-font"
+                        style="font-size:19px;"></i> Large</button>
+            </div>
         </div>
     </div>
 

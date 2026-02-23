@@ -18,7 +18,11 @@ const Products = {
             this.data = {
                 products: allProducts.map(p => ({
                     ...p,
-                    stock: savedStock[p.id] !== undefined ? savedStock[p.id] : p.stock
+                    stock: savedStock[p.id] !== undefined ? savedStock[p.id] : p.stock,
+                    barcode: p.barcode || '',
+                    photo: p.photo || '',
+                    weight: p.weight || '',
+                    weightUnit: p.weightUnit || 'g'
                 }))
             };
             return this.data.products;
@@ -43,7 +47,11 @@ const Products = {
             this.data = {
                 products: allProducts.map(p => ({
                     ...p,
-                    stock: savedStock[p.id] !== undefined ? savedStock[p.id] : p.stock
+                    stock: savedStock[p.id] !== undefined ? savedStock[p.id] : p.stock,
+                    barcode: p.barcode || '',
+                    photo: p.photo || '',
+                    weight: p.weight || '',
+                    weightUnit: p.weightUnit || 'g'
                 }))
             };
             return this.data.products;
@@ -62,7 +70,11 @@ const Products = {
             id: newId,
             ...productData,
             price: parseFloat(productData.price),
-            stock: parseInt(productData.stock)
+            stock: parseInt(productData.stock),
+            barcode: productData.barcode || '',
+            photo: productData.photo || '',
+            weight: productData.weight || '',
+            weightUnit: productData.weightUnit || 'g'
         };
 
         // Add to in-memory data
@@ -87,6 +99,10 @@ const Products = {
             product.price = parseFloat(updatedData.price);
             product.category = updatedData.category;
             product.stock = parseInt(updatedData.stock);
+            product.barcode = updatedData.barcode || product.barcode || '';
+            if (updatedData.photo) product.photo = updatedData.photo;
+            product.weight = updatedData.weight || '';
+            product.weightUnit = updatedData.weightUnit || 'g';
 
             // Update custom products in localStorage if it was a custom product
             const customProducts = JSON.parse(localStorage.getItem('pos_custom_products')) || [];
@@ -97,7 +113,11 @@ const Products = {
                     ...customProducts[customIdx],
                     ...updatedData,
                     price: parseFloat(updatedData.price),
-                    stock: parseInt(updatedData.stock)
+                    stock: parseInt(updatedData.stock),
+                    barcode: updatedData.barcode || '',
+                    photo: updatedData.photo || customProducts[customIdx].photo || '',
+                    weight: updatedData.weight || '',
+                    weightUnit: updatedData.weightUnit || 'g'
                 };
                 localStorage.setItem('pos_custom_products', JSON.stringify(customProducts));
             }
@@ -152,6 +172,12 @@ const Products = {
         return this.data.products.find(p => p.id === parseInt(id));
     },
 
+    // Get product by Barcode
+    getProductByBarcode(barcode) {
+        if (!barcode) return null;
+        return this.data.products.find(p => p.barcode === barcode);
+    },
+
     // Filter products by category
     getProductsByCategory(category) {
         if (category === 'all') return this.getAllProducts();
@@ -163,7 +189,8 @@ const Products = {
         query = query.toLowerCase();
         return this.data.products.filter(p =>
             p.name.toLowerCase().includes(query) ||
-            p.category.toLowerCase().includes(query)
+            p.category.toLowerCase().includes(query) ||
+            (p.barcode && p.barcode.toLowerCase().includes(query))
         );
     }
 };
